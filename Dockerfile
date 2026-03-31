@@ -1,5 +1,8 @@
 #syntax=docker/dockerfile:1
 
+ARG USER_UID=0
+ARG USER_GID=0
+
 # Versions
 FROM dunglas/frankenphp:1-php8.5 AS frankenphp_upstream
 
@@ -53,6 +56,9 @@ CMD [ "frankenphp", "run", "--config", "/etc/frankenphp/Caddyfile" ]
 # Dev FrankenPHP image
 FROM frankenphp_base AS frankenphp_dev
 
+ARG USER_UID
+ARG USER_GID
+
 ENV APP_ENV=dev
 ENV XDEBUG_MODE=off
 ENV FRANKENPHP_WORKER_CONFIG=watch
@@ -74,12 +80,24 @@ RUN <<-EOF
 		sudo
 	install-php-extensions xdebug
 	rm -rf /var/lib/apt/lists/*
-	useradd -m -s /bin/bash nonroot
-	echo "nonroot ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/nonroot
+	if [ "$USER_UID" != "0" ]; then
+		groupadd -g "$USER_GID" nonroot
+		useradd -m -s /bin/bash -u "$USER_UID" -g "$USER_GID" nonroot
+		echo "nonroot ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/nonroot
+	fi
 	git config --system --add safe.directory /app
 EOF
 
 COPY --link frankenphp/conf.d/20-app.dev.ini $PHP_INI_DIR/app.conf.d/
+
+RUN <<-EOF
+	mkdir -p /app/var /data/caddy /config/caddy
+	if [ "$USER_UID" != "0" ]; then
+		chown -R nonroot:nonroot /app/var /data /config
+	fi
+EOF
+
+USER ${USER_UID}:${USER_GID}
 
 CMD [ "frankenphp", "run", "--config", "/etc/frankenphp/Caddyfile", "--watch" ]
 
