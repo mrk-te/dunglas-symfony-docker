@@ -50,6 +50,7 @@ mode inside a sandboxed environment.
 10. [Updating the template](docs/updating.md)
 11. [Troubleshooting](docs/troubleshooting.md)
 12. [Using AI Coding Agents](docs/agents.md)
+13. [Handle permissions on linux](docs/permissions-on-linux.md)
 
 ## License
 
